@@ -1,15 +1,967 @@
-```html
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MURI - 프리미엄 케어 라운지</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MURI - Premium Hair Care Tracker</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        :root {
+            --gold-primary: #d4af37;
+            --gold-light: #f3e5ab;
+            --gold-dark: #996515;
+        }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #050505;
+            color: #ffffff;
+            margin: 0;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        
+        /* Layout Constraints */
+        #app-container {
+            width: 100%;
+            max-width: 430px; /* Mobile size constraint */
+            height: 100dvh;
+            margin: 0 auto;
+            position: relative;
+            background: rgba(10, 10, 10, 0.6);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
 
-```
+        /* Glassmorphism */
+        .glass {
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        
+        /* Gold Text Gradient */
+        .text-gold-gradient {
+            background: linear-gradient(to right, var(--gold-light), var(--gold-primary), var(--gold-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.8s ease-out forwards; }
+        .fade-out { animation: fadeOut 0.8s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* Cinematic Intro Scale */
+        .cinematic-zoom { animation: cinematicZoom 3s ease-out forwards; }
+        @keyframes cinematicZoom {
+            0% { transform: scale(0.8); opacity: 0; filter: blur(10px); }
+            50% { opacity: 1; filter: blur(0px); }
+            100% { transform: scale(1.05); opacity: 0; filter: blur(5px); }
+        }
+
+        /* Circular Progress Ring */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Button Effects */
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold-primary));
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+        .btn-gold:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(212, 175, 55, 0.2);
+        }
+        
+        /* Custom Scrollbar for History */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 4px; }
+
+        /* Slots Animation for Draw */
+        .slot-rolling {
+            animation: rolling 0.05s linear infinite;
+            filter: blur(2px);
+        }
+        @keyframes rolling {
+            0% { transform: translateY(-15px) scale(0.95); opacity: 0.3; }
+            50% { transform: translateY(0) scale(1.05); opacity: 1; filter: blur(0px); }
+            100% { transform: translateY(15px) scale(0.95); opacity: 0.3; }
+        }
+
+        .glow-pop {
+            animation: glowPop 1.5s ease-out forwards;
+        }
+        @keyframes glowPop {
+            0% { transform: scale(1); text-shadow: 0 0 0px rgba(212,175,55,0); }
+            20% { transform: scale(1.3); text-shadow: 0 0 40px rgba(212,175,55,1), 0 0 80px rgba(255,255,255,0.8); color: #fff; }
+            100% { transform: scale(1); text-shadow: 0 0 20px rgba(212,175,55,0.5); }
+        }
+
+        .ray-spin {
+            animation: raySpin 10s linear infinite;
+        }
+        @keyframes raySpin {
+            from { transform: rotate(0deg) scale(2); }
+            to { transform: rotate(360deg) scale(2); }
+        }
+
+        /* Views management */
+        .view-section {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .view-section.active { display: flex; }
+
+        /* Custom Scroll Settings for View Main */
+        #view-main {
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        #view-main::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="three-canvas-container" class="absolute inset-0 z-0"></div>
+
+    <div id="app-container">
+        
+        <!-- 1. Cinematic Intro 1 -->
+        <div id="view-intro-1" class="view-section active justify-center items-center bg-black z-50">
+            <h1 class="font-cinzel text-6xl tracking-[0.5em] text-gold-gradient cinematic-zoom ml-4">MURI</h1>
+            <p class="text-sm tracking-widest text-gray-400 absolute bottom-10 opacity-50">Premium Medihair Care</p>
+        </div>
+
+        <!-- 2. Auth View (Login / Register) -->
+        <div id="view-auth" class="view-section px-6 py-10 justify-center">
+            <!-- Admin Setup Cog -->
+            <button onclick="openAdminConfig()" class="absolute top-6 right-6 text-gray-400 hover:text-yellow-500 transition-colors z-20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+
+            <div class="glass rounded-3xl p-8 w-full shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-700 via-yellow-300 to-yellow-700"></div>
+                
+                <h2 class="font-cinzel text-3xl text-center text-gold-gradient mb-8 font-bold">MURI</h2>
+                
+                <!-- Tabs -->
+                <div class="flex mb-6 border-b border-gray-600">
+                    <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 pb-3 text-center text-yellow-500 border-b-2 border-yellow-500 font-bold transition-colors">로그인</button>
+                    <button onclick="switchAuthTab('register')" id="tab-register" class="flex-1 pb-3 text-center text-gray-500 border-b-2 border-transparent font-bold transition-colors">계정 등록</button>
+                </div>
+
+                <!-- Form -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1 ml-1">아이디</label>
+                        <input type="text" id="auth-id" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors" placeholder="아이디를 입력하세요">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1 ml-1">비밀번호</label>
+                        <input type="password" id="auth-pw" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors" placeholder="비밀번호를 입력하세요">
+                    </div>
+                    <button onclick="handleAuthAction()" id="auth-btn" class="w-full btn-gold text-black font-bold text-lg rounded-xl py-3 mt-4">접속하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Cinematic Intro 2 (Welcome) -->
+        <div id="view-intro-2" class="view-section justify-center items-center bg-black/90 z-40 backdrop-blur-sm">
+            <div id="welcome-text" class="text-2xl text-center font-light leading-relaxed opacity-0 transform translate-y-4 transition-all duration-1000 text-gold-gradient">
+                VIP 윤선혜님,<br>오늘도 아름다운 하루 되세요.
+            </div>
+        </div>
+
+        <!-- 4. Main Dashboard -->
+        <div id="view-main" class="view-section flex-col pt-12 pb-6 px-5 h-full">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <div>
+                    <h2 class="font-cinzel text-2xl font-bold text-gold-gradient">MURI</h2>
+                    <p class="text-xs text-gray-400 tracking-wide mt-1">VIP 윤선혜님의 모발 케어룸</p>
+                </div>
+                <div class="text-right flex flex-col items-end">
+                    <p class="text-xs text-gray-400 mb-1">누적 포인트</p>
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-payout" onclick="triggerPayout()" class="hidden text-[10px] bg-red-900/40 border border-red-700/50 text-red-400 px-3 py-1 rounded-full hover:bg-red-800 transition-colors shrink-0 shadow-lg">
+                            정산
+                        </button>
+                        <p class="text-xl font-bold text-yellow-400" id="ui-total-points">0 <span class="text-sm font-normal text-gray-300">P</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Ring Area -->
+            <div class="flex-1 flex flex-col items-center justify-center relative my-4 shrink-0">
+                <!-- SVG Ring -->
+                <div class="relative w-56 h-56 flex items-center justify-center">
+                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="6"/>
+                        <circle id="progress-circle" class="progress-ring__circle" cx="60" cy="60" r="54" fill="none" stroke="url(#goldGradient)" stroke-width="6" stroke-linecap="round" 
+                                stroke-dasharray="339.292" stroke-dashoffset="339.292"/>
+                        <defs>
+                            <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#f3e5ab" />
+                                <stop offset="50%" stop-color="#d4af37" />
+                                <stop offset="100%" stop-color="#996515" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    
+                    <div class="text-center z-10 flex flex-col items-center justify-center">
+                        <span class="text-sm text-gray-400 mb-1">케어 달성률</span>
+                        <div class="flex items-baseline space-x-1">
+                            <span id="ui-current-count" class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-yellow-200 to-yellow-600">0</span>
+                            <span class="text-xl text-gray-500">/ 5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Action Buttons -->
+                <div id="admin-actions" class="w-full mt-8 space-y-3 hidden opacity-0 transition-opacity duration-500">
+                    <button onclick="recordCare()" class="w-full glass py-4 rounded-2xl flex items-center justify-center space-x-2 hover:bg-white/5 transition-colors border border-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="font-bold text-gray-200">케어 완료 체크</span>
+                    </button>
+                    
+                    <button id="btn-draw" onclick="triggerDraw()" class="w-full btn-gold py-4 rounded-2xl text-black font-bold text-lg hidden flex items-center justify-center space-x-2 relative overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.5)]">
+                        <span class="absolute inset-0 w-full h-full bg-white/20 animate-pulse"></span>
+                        <span class="relative z-10">🎉 럭키 포인트 뽑기!</span>
+                        <span id="ui-draw-count" class="relative z-10 bg-black/80 text-yellow-500 text-xs px-2 py-1 rounded-full ml-2">1</span>
+                    </button>
+                </div>
+
+                <!-- Viewer Message -->
+                <div id="viewer-message" class="mt-8 text-center text-sm text-gray-500">
+                    프라엘 메디헤어<br>꾸준한 케어로 아름다움을 유지하세요.
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="h-1/3 min-h-[150px] max-h-[250px] glass rounded-3xl border border-gray-700 p-5 mb-8 flex flex-col relative overflow-hidden shrink-0 shadow-lg shadow-black/50">
+                <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gray-600 rounded-b-full opacity-50"></div>
+                <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    최근 기록
+                </h3>
+                <div id="ui-history-list" class="flex-1 overflow-y-auto space-y-3 pr-2">
+                    <!-- History items will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Approval Modal -->
+        <div id="modal-admin-approval" class="fixed inset-0 bg-black/95 z-50 hidden flex-col p-6 backdrop-blur-md">
+            <div class="flex justify-between items-center mb-6 mt-10 border-b border-gray-700 pb-4">
+                <h2 class="text-xl font-bold text-gold-gradient">가입 승인 관리</h2>
+                <button onclick="closeAdminConfig()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            
+            <div id="admin-auth-step">
+                <p class="text-sm text-gray-400 mb-2">관리자 비밀번호를 입력하세요</p>
+                <input type="password" id="admin-secret-pw" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 mb-4" placeholder="비밀번호">
+                <button onclick="verifyAdminSecret()" class="w-full glass py-3 rounded-xl text-yellow-500 font-bold border-yellow-700/50">확인</button>
+            </div>
+
+            <div id="admin-list-step" class="hidden flex-col h-full">
+                <p class="text-xs text-gray-500 mb-4">승인 대기중인 계정 목록입니다.</p>
+                <div id="ui-approval-list" class="flex-1 overflow-y-auto space-y-3">
+                    <!-- Approval items -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Cinematic Draw Modal -->
+        <div id="modal-draw" class="fixed inset-0 bg-black/95 z-50 hidden flex-col items-center justify-center backdrop-blur-lg overflow-hidden">
+            <!-- Ray Background -->
+            <div class="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none ray-spin hidden" id="draw-rays">
+                <div class="w-[200%] h-[200%] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(212,175,55,0.3)_10deg,transparent_20deg,rgba(212,175,55,0.3)_30deg,transparent_40deg,rgba(212,175,55,0.3)_50deg,transparent_60deg,rgba(212,175,55,0.3)_70deg,transparent_80deg,rgba(212,175,55,0.3)_90deg,transparent_100deg,rgba(212,175,55,0.3)_110deg,transparent_120deg,rgba(212,175,55,0.3)_130deg,transparent_140deg,rgba(212,175,55,0.3)_150deg,transparent_160deg,rgba(212,175,55,0.3)_170deg,transparent_180deg,rgba(212,175,55,0.3)_190deg,transparent_200deg,rgba(212,175,55,0.3)_210deg,transparent_220deg,rgba(212,175,55,0.3)_230deg,transparent_240deg,rgba(212,175,55,0.3)_250deg,transparent_260deg,rgba(212,175,55,0.3)_270deg,transparent_280deg,rgba(212,175,55,0.3)_290deg,transparent_300deg,rgba(212,175,55,0.3)_310deg,transparent_320deg,rgba(212,175,55,0.3)_330deg,transparent_340deg,rgba(212,175,55,0.3)_350deg,transparent_360deg)]"></div>
+            </div>
+
+            <h2 id="draw-title" class="font-cinzel text-3xl text-gray-400 mb-12 tracking-[0.3em] z-10 transition-all duration-500">LUCKY DRAW</h2>
+            
+            <div id="draw-box" class="glass w-72 h-40 rounded-3xl flex items-center justify-center relative overflow-hidden border-yellow-500/30 transition-all duration-500 z-10">
+                <div class="absolute inset-0 bg-gradient-to-b from-black/90 via-transparent to-black/90 z-10 pointer-events-none"></div>
+                <div id="draw-amount-display" class="text-6xl font-bold text-gold-gradient tracking-tighter w-full text-center">
+                    ---
+                </div>
+            </div>
+            
+            <p id="draw-status-text" class="mt-12 text-gray-400 animate-pulse z-10 text-lg tracking-wider">운명의 룰렛이 돌아갑니다...</p>
+            
+            <button id="btn-close-draw" onclick="closeDrawModal()" class="mt-12 text-gray-300 border border-yellow-700/50 bg-yellow-900/20 px-8 py-3 rounded-full hidden hover:bg-yellow-600 hover:text-black hover:border-yellow-500 transition-all font-bold z-10 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+                보상 수령하기
+            </button>
+        </div>
+
+        <!-- Custom Toast -->
+        <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full text-sm shadow-xl z-[100] transition-all duration-300 opacity-0 pointer-events-none translate-y-[-20px] border border-gray-600">
+            Message
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Variables
+        const appId = 'muri-app-123';
+        
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB3ABhkQqPIF1QtnmhwanervGA9Uy1qoRg",
+            authDomain: "muri-ad936.firebaseapp.com",
+            projectId: "muri-ad936",
+            storageBucket: "muri-ad936.firebasestorage.app",
+            messagingSenderId: "550155312044",
+            appId: "1:550155312044:web:b57b2fada138a9fe2cb809"
+        };
+
+        // Init Firebase
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch(e) {
+            console.error("Firebase Init Error", e);
+        }
+
+        // App State
+        let currentUser = null; // { id, isApproved, isAdmin }
+        let globalState = { careCount: 0, availableDraws: 0, totalPoints: 0, history: [], lastDraw: 0 };
+        let unsubscribeGlobal = null;
+        let isProcessing = false;
+
+        const ADMIN_ID = "gguru1081";
+        const ADMIN_PW = "djslzja1!";
+        const ADMIN_SECRET = "djslzja1324!";
+        const REWARDS = [10000, 30000, 50000];
+
+        // Core Paths
+        const pathUsers = `artifacts/${appId}/public/data/muriUsers`;
+        const pathState = `artifacts/${appId}/public/data/muriState`;
+        const docStateId = `globalTracker`;
+
+        function initThreeJS() {
+            const container = document.getElementById('three-canvas-container');
+            const scene = new THREE.Scene();
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 50;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            // Create Particles
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 300;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 100; // Spread
+            }
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+            // Create Canvas Texture for Soft Glowing Particles
+            const canvas = document.createElement('canvas');
+            canvas.width = 16; canvas.height = 16;
+            const context = canvas.getContext('2d');
+            const gradient = context.createRadialGradient(8, 8, 0, 8, 8, 8);
+            gradient.addColorStop(0, 'rgba(255, 223, 0, 1)');
+            gradient.addColorStop(1, 'rgba(212, 175, 55, 0)');
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 16, 16);
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.PointsMaterial({
+                size: 1.5,
+                map: texture,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, material);
+            scene.add(particlesMesh);
+
+            let time = 0;
+            function animate() {
+                requestAnimationFrame(animate);
+                time += 0.002;
+                particlesMesh.position.y = time * 5 % 50;
+                particlesMesh.rotation.y = time * 0.1;
+                
+                const positions = particlesGeometry.attributes.position.array;
+                for(let i=0; i<particlesCount; i++) {
+                    positions[i*3+1] += 0.05; // slowly move up
+                    if(positions[i*3+1] > 50) positions[i*3+1] = -50;
+                }
+                particlesGeometry.attributes.position.needsUpdate = true;
+                
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        window.showToast = (msg) => {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+            }, 3000);
+        };
+
+        window.switchAuthTab = (mode) => {
+            const isLogin = mode === 'login';
+            document.getElementById('tab-login').className = isLogin ? "flex-1 pb-3 text-center text-yellow-500 border-b-2 border-yellow-500 font-bold transition-colors" : "flex-1 pb-3 text-center text-gray-500 border-b-2 border-transparent font-bold transition-colors";
+            document.getElementById('tab-register').className = !isLogin ? "flex-1 pb-3 text-center text-yellow-500 border-b-2 border-yellow-500 font-bold transition-colors" : "flex-1 pb-3 text-center text-gray-500 border-b-2 border-transparent font-bold transition-colors";
+            document.getElementById('auth-btn').innerText = isLogin ? "접속하기" : "가입 요청하기";
+            document.getElementById('auth-btn').dataset.mode = mode;
+        };
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function playIntroSequence() {
+            setTimeout(() => {
+                document.getElementById('view-intro-1').classList.add('fade-out');
+                setTimeout(() => {
+                    switchView('view-auth');
+                }, 800);
+            }, 3000);
+        }
+
+        function playWelcomeSequence() {
+            switchView('view-intro-2');
+            const text = document.getElementById('welcome-text');
+            
+            if(currentUser.isAdmin) {
+                text.innerHTML = `관리자님 환영합니다.<br>케어 관리를 시작합니다.`;
+            } else {
+                text.innerHTML = `VIP 윤선혜님,<br>오늘도 아름다운 하루 되세요.`;
+            }
+
+            setTimeout(() => {
+                text.style.opacity = '1';
+                text.style.transform = 'translateY(0)';
+            }, 100);
+
+            setTimeout(() => {
+                text.style.opacity = '0';
+                text.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    switchView('view-main');
+                    setupMainDashboard();
+                }, 1000);
+            }, 3000);
+        }
+
+        async function bootApp() {
+            initThreeJS();
+            playIntroSequence();
+            
+            try {
+                // 토큰 불일치 에러 시 익명 로그인으로 자동 전환되도록 예외 처리 추가
+                try {
+                    // 환경에 따라 토큰을 사용하는 로직이 있다면 여기에 추가
+                    // 현재는 Vercel 배포 시 익명 로그인을 기본으로 사용하도록 구성
+                    await signInAnonymously(auth);
+                } catch (authError) {
+                     console.warn("Auth Error, falling back to anonymous", authError);
+                     await signInAnonymously(auth);
+                }
+                
+                console.log("Firebase Auth Connected");
+                await seedGlobalState();
+                await seedAdminAccount();
+            } catch (e) {
+                console.error("Auth Error", e);
+                showToast("서버 연결에 실패했습니다.");
+            }
+        }
+
+        async function seedAdminAccount() {
+            if(!auth.currentUser) return;
+            const adminRef = doc(db, pathUsers, ADMIN_ID);
+            const snap = await getDoc(adminRef);
+            if (!snap.exists()) {
+                await setDoc(adminRef, { pw: ADMIN_PW, isApproved: true, isAdmin: true, createdAt: Date.now() });
+            }
+        }
+
+        async function seedGlobalState() {
+            if(!auth.currentUser) return;
+            const stateRef = doc(db, pathState, docStateId);
+            const snap = await getDoc(stateRef);
+            if (!snap.exists()) {
+                await setDoc(stateRef, globalState);
+            }
+        }
+
+        window.handleAuthAction = async () => {
+            if(!auth.currentUser || isProcessing) return;
+            
+            const id = document.getElementById('auth-id').value.trim();
+            const pw = document.getElementById('auth-pw').value.trim();
+            const mode = document.getElementById('auth-btn').dataset.mode || 'login';
+
+            if(!id || !pw) return showToast("아이디와 비밀번호를 입력해주세요.");
+
+            isProcessing = true;
+            document.getElementById('auth-btn').innerText = "처리중...";
+
+            try {
+                const userRef = doc(db, pathUsers, id);
+                const userSnap = await getDoc(userRef);
+
+                if (mode === 'login') {
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data();
+                        if (userData.pw === pw) {
+                            if (userData.isApproved) {
+                                currentUser = { id, isAdmin: userData.isAdmin, isApproved: true };
+                                playWelcomeSequence();
+                            } else {
+                                showToast("가입 승인 대기중입니다.");
+                            }
+                        } else {
+                            showToast("비밀번호가 일치하지 않습니다.");
+                        }
+                    } else {
+                        showToast("존재하지 않는 아이디입니다.");
+                    }
+                } else {
+                    // Register
+                    if (userSnap.exists()) {
+                        showToast("이미 존재하는 아이디입니다.");
+                    } else {
+                        await setDoc(userRef, { pw: pw, isApproved: false, isAdmin: false, createdAt: Date.now() });
+                        showToast("가입 요청이 완료되었습니다. 승인을 기다려주세요.");
+                        switchAuthTab('login');
+                    }
+                }
+            } catch (e) {
+                console.error("Auth flow error", e);
+                showToast("오류가 발생했습니다.");
+            } finally {
+                isProcessing = false;
+                document.getElementById('auth-btn').innerText = mode === 'login' ? "접속하기" : "가입 요청하기";
+            }
+        };
+
+        window.openAdminConfig = () => {
+            document.getElementById('modal-admin-approval').classList.remove('hidden');
+            document.getElementById('modal-admin-approval').classList.add('flex');
+            document.getElementById('admin-auth-step').classList.remove('hidden');
+            document.getElementById('admin-list-step').classList.add('hidden');
+            document.getElementById('admin-secret-pw').value = '';
+        };
+
+        window.closeAdminConfig = () => {
+            document.getElementById('modal-admin-approval').classList.add('hidden');
+            document.getElementById('modal-admin-approval').classList.remove('flex');
+        };
+
+        window.verifyAdminSecret = async () => {
+            const pw = document.getElementById('admin-secret-pw').value;
+            if (pw === ADMIN_SECRET) {
+                document.getElementById('admin-auth-step').classList.add('hidden');
+                document.getElementById('admin-list-step').classList.remove('hidden');
+                document.getElementById('admin-list-step').classList.add('flex');
+                await loadUnapprovedUsers();
+            } else {
+                showToast("권한 코드가 틀렸습니다.");
+            }
+        };
+
+        async function loadUnapprovedUsers() {
+            if(!auth.currentUser) return;
+            const listEl = document.getElementById('ui-approval-list');
+            listEl.innerHTML = '<p class="text-center text-gray-500 mt-4">불러오는 중...</p>';
+            
+            try {
+                // Rule 2: No complex queries, fetch all and filter in memory
+                const querySnapshot = await getDocs(collection(db, pathUsers));
+                let pendingUsers = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if(data.isApproved === false) {
+                        pendingUsers.push({ id: doc.id, ...data });
+                    }
+                });
+
+                if(pendingUsers.length === 0) {
+                    listEl.innerHTML = '<p class="text-center text-gray-500 mt-4">승인 대기중인 계정이 없습니다.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = pendingUsers.map(user => `
+                    <div class="glass p-3 rounded-xl flex justify-between items-center border border-gray-700">
+                        <span class="text-white">${user.id}</span>
+                        <button onclick="approveUser('${user.id}')" class="bg-yellow-600/80 hover:bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-bold transition-colors">승인</button>
+                    </div>
+                `).join('');
+
+            } catch(e) {
+                console.error("Load users error", e);
+                listEl.innerHTML = '<p class="text-center text-red-500 mt-4">오류 발생</p>';
+            }
+        }
+
+        window.approveUser = async (userId) => {
+            try {
+                await updateDoc(doc(db, pathUsers, userId), { isApproved: true });
+                showToast(`${userId} 승인 완료`);
+                await loadUnapprovedUsers();
+            } catch(e) {
+                console.error("Approve error", e);
+                showToast("승인 처리 실패");
+            }
+        };
+
+        function setupMainDashboard() {
+            if(!auth.currentUser) return;
+
+            // Setup UI based on role
+            if(currentUser.isAdmin) {
+                document.getElementById('admin-actions').classList.remove('hidden');
+                document.getElementById('btn-payout').classList.remove('hidden');
+                document.getElementById('viewer-message').classList.add('hidden');
+                setTimeout(() => {
+                    document.getElementById('admin-actions').classList.remove('opacity-0');
+                }, 100);
+            } else {
+                document.getElementById('admin-actions').classList.add('hidden');
+                document.getElementById('btn-payout').classList.add('hidden');
+                document.getElementById('viewer-message').classList.remove('hidden');
+            }
+
+            // Listen to Shared State
+            const stateRef = doc(db, pathState, docStateId);
+            unsubscribeGlobal = onSnapshot(stateRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const newState = docSnap.data();
+                    
+                    // Check if a new draw happened to trigger animation for everyone
+                    if(newState.lastDraw > globalState.lastDraw && globalState.lastDraw !== 0) {
+                        // Find the newest reward in history
+                        const lastReward = newState.history.find(h => h.type === 'reward');
+                        if(lastReward && (newState.lastDraw - globalState.lastDraw > 0)) {
+                            playDrawResultAnimation(lastReward.amount);
+                        }
+                    }
+
+                    globalState = newState;
+                    updateDashboardUI();
+                }
+            }, (error) => {
+                console.error("State listener error", error);
+            });
+        }
+
+        function updateDashboardUI() {
+            // Update Points
+            document.getElementById('ui-total-points').innerHTML = `${globalState.totalPoints.toLocaleString()} <span class="text-sm font-normal text-gray-300">P</span>`;
+
+            // Update Circle
+            const circle = document.getElementById('progress-circle');
+            const circumference = 54 * 2 * Math.PI; // 339.292
+            const currentCount = globalState.careCount;
+            const displayCount = currentCount; 
+            
+            // Calculate offset based on 5
+            const percentage = displayCount / 5;
+            const offset = circumference - (percentage * circumference);
+            circle.style.strokeDashoffset = offset;
+
+            document.getElementById('ui-current-count').innerText = displayCount;
+
+            // Update Draw Button
+            const btnDraw = document.getElementById('btn-draw');
+            if (globalState.availableDraws > 0) {
+                btnDraw.classList.remove('hidden');
+                document.getElementById('ui-draw-count').innerText = globalState.availableDraws;
+                // Make ring full if there are available draws and count is 0
+                if(displayCount === 0) {
+                    circle.style.strokeDashoffset = 0; // Full visual ring
+                    document.getElementById('ui-current-count').innerText = '5';
+                }
+            } else {
+                btnDraw.classList.add('hidden');
+            }
+
+            // Update History
+            const listEl = document.getElementById('ui-history-list');
+            if(!globalState.history || globalState.history.length === 0) {
+                listEl.innerHTML = '<p class="text-xs text-gray-500 text-center mt-4">기록이 없습니다.</p>';
+            } else {
+                listEl.innerHTML = globalState.history.map(item => {
+                    const date = new Date(item.timestamp);
+                    const dateStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+                    
+                    if(item.type === 'care') {
+                        return `
+                        <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-gray-800 shrink-0">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center mr-3">✨</div>
+                                <div>
+                                    <p class="text-sm font-bold text-gray-200">케어 완료</p>
+                                    <p class="text-[10px] text-gray-500">${dateStr}</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold text-gray-400">1회 적립</span>
+                        </div>`;
+                    } else if(item.type === 'reward') {
+                        return `
+                        <div class="flex items-center justify-between bg-yellow-900/20 p-3 rounded-xl border border-yellow-700/30 shrink-0">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-yellow-600/20 flex items-center justify-center mr-3 text-lg">🎁</div>
+                                <div>
+                                    <p class="text-sm font-bold text-yellow-500">럭키 포인트 당첨</p>
+                                    <p class="text-[10px] text-gray-500">${dateStr}</p>
+                                </div>
+                            </div>
+                            <span class="text-sm font-bold text-yellow-400">+${item.amount.toLocaleString()}P</span>
+                        </div>`;
+                    } else if(item.type === 'payout') {
+                        return `
+                        <div class="flex items-center justify-between bg-red-900/20 p-3 rounded-xl border border-red-700/30 shrink-0">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-red-600/20 flex items-center justify-center mr-3 text-lg">💸</div>
+                                <div>
+                                    <p class="text-sm font-bold text-red-400">포인트 정산 완료</p>
+                                    <p class="text-[10px] text-gray-500">${dateStr}</p>
+                                </div>
+                            </div>
+                            <span class="text-sm font-bold text-red-500">-${item.amount.toLocaleString()}P</span>
+                        </div>`;
+                    }
+                }).join('');
+            }
+        }
+
+        window.recordCare = async () => {
+            if(isProcessing || !currentUser.isAdmin) return;
+            isProcessing = true;
+            
+            try {
+                let newCount = globalState.careCount + 1;
+                let newDraws = globalState.availableDraws;
+                
+                if (newCount >= 5) {
+                    newDraws += 1;
+                    newCount = 0;
+                    showToast("5회 달성! 뽑기 기회가 부여되었습니다.");
+                } else {
+                    showToast("케어가 완료되었습니다.");
+                }
+
+                const newHistory = [{
+                    id: Date.now().toString(),
+                    type: 'care',
+                    timestamp: Date.now()
+                }, ...globalState.history].slice(0, 30); // Keep last 30
+
+                await updateDoc(doc(db, pathState, docStateId), {
+                    careCount: newCount,
+                    availableDraws: newDraws,
+                    history: newHistory
+                });
+
+            } catch (e) {
+                console.error("Care Check Error", e);
+                showToast("기록에 실패했습니다.");
+            } finally {
+                isProcessing = false;
+            }
+        };
+
+        window.triggerDraw = async () => {
+            if(isProcessing || !currentUser.isAdmin || globalState.availableDraws <= 0) return;
+            isProcessing = true;
+
+            // Pick Random Reward
+            const prize = REWARDS[Math.floor(Math.random() * REWARDS.length)];
+            const timestamp = Date.now();
+
+            try {
+                const newHistory = [{
+                    id: timestamp.toString(),
+                    type: 'reward',
+                    amount: prize,
+                    timestamp: timestamp
+                }, ...globalState.history].slice(0, 30);
+
+                // Update DB First, listener will trigger animation locally
+                await updateDoc(doc(db, pathState, docStateId), {
+                    availableDraws: globalState.availableDraws - 1,
+                    totalPoints: globalState.totalPoints + prize,
+                    history: newHistory,
+                    lastDraw: timestamp
+                });
+                
+                // Admin triggers local animation immediately to sync perfectly with DB write
+                playDrawResultAnimation(prize);
+
+            } catch (e) {
+                console.error("Draw Error", e);
+                showToast("뽑기 처리 중 오류 발생");
+            } finally {
+                isProcessing = false;
+            }
+        };
+
+        window.triggerPayout = async () => {
+            if(isProcessing || !currentUser.isAdmin) return;
+            
+            const currentPoints = globalState.totalPoints;
+            if (currentPoints <= 0) {
+                showToast("정산할 포인트가 없습니다.");
+                return;
+            }
+
+            isProcessing = true;
+            try {
+                const timestamp = Date.now();
+                const newHistory = [{
+                    id: timestamp.toString(),
+                    type: 'payout',
+                    amount: currentPoints,
+                    timestamp: timestamp
+                }, ...globalState.history].slice(0, 30);
+
+                await updateDoc(doc(db, pathState, docStateId), {
+                    totalPoints: 0,
+                    history: newHistory
+                });
+
+                showToast(`${currentPoints.toLocaleString()}P 정산이 완료되었습니다.`);
+            } catch (e) {
+                console.error("Payout Error", e);
+                showToast("정산 처리 중 오류가 발생했습니다.");
+            } finally {
+                isProcessing = false;
+            }
+        };
+
+        function playDrawResultAnimation(finalAmount) {
+            const modal = document.getElementById('modal-draw');
+            const display = document.getElementById('draw-amount-display');
+            const statusText = document.getElementById('draw-status-text');
+            const closeBtn = document.getElementById('btn-close-draw');
+            const rays = document.getElementById('draw-rays');
+            const title = document.getElementById('draw-title');
+            const box = document.getElementById('draw-box');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            display.classList.add('slot-rolling');
+            display.classList.remove('text-yellow-400', 'glow-pop');
+            display.classList.add('text-gold-gradient');
+            
+            box.classList.remove('shadow-[0_0_50px_rgba(212,175,55,0.6)]', 'scale-110');
+            rays.classList.add('hidden');
+            title.classList.remove('text-yellow-400', 'scale-110');
+            title.innerText = "LUCKY DRAW";
+            
+            closeBtn.classList.add('hidden');
+            statusText.innerText = "운명의 룰렛이 돌아갑니다...";
+            statusText.classList.add('animate-pulse');
+            statusText.classList.remove('text-yellow-400', 'font-bold');
+
+            // Cinematic Fast Rolling Effect using requestAnimationFrame
+            let startTime = null;
+            const duration = 2500; // 2.5 seconds of rolling
+
+            function rollFrame(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = timestamp - startTime;
+
+                if (progress < duration) {
+                    // Fast update
+                    if (Math.floor(progress / 50) % 2 === 0) {
+                        display.innerText = REWARDS[Math.floor(Math.random() * REWARDS.length)].toLocaleString();
+                    }
+                    requestAnimationFrame(rollFrame);
+                } else {
+                    // End of roll
+                    display.classList.remove('slot-rolling');
+                    
+                    // Final Result Cinematic Polish
+                    display.innerText = finalAmount.toLocaleString();
+                    display.classList.remove('text-gold-gradient');
+                    display.classList.add('text-yellow-400', 'glow-pop'); 
+                    
+                    box.classList.add('shadow-[0_0_50px_rgba(212,175,55,0.6)]', 'scale-110');
+                    rays.classList.remove('hidden');
+                    title.classList.add('text-yellow-400', 'scale-110');
+                    title.innerText = "JACKPOT!";
+                    
+                    statusText.innerText = "축하합니다! 포인트가 적립되었습니다.";
+                    statusText.classList.remove('animate-pulse', 'text-gray-400');
+                    statusText.classList.add('text-yellow-400', 'font-bold');
+                    
+                    setTimeout(() => {
+                        closeBtn.classList.remove('hidden');
+                    }, 500);
+                }
+            }
+            requestAnimationFrame(rollFrame);
+        }
+
+        window.closeDrawModal = () => {
+            const modal = document.getElementById('modal-draw');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        // Boot
+        window.addEventListener('DOMContentLoaded', bootApp);
+
+    </script>
+</body>
+</html>
