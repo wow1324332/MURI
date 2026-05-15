@@ -226,15 +226,12 @@ export default function App() {
             const isFilled = index < careCount;
             const isLast = index === TARGET_COUNT - 1;
             
+            // 모든 백틱을 제거하고 기본 따옴표와 더하기 연산자로 수정했습니다.
+            const itemClassName = "relative flex flex-col items-center justify-center aspect-square rounded-2xl transition-all duration-500 " + 
+              (isFilled ? "bg-gradient-to-br from-pink-400 to-rose-400 shadow-md shadow-pink-200 scale-100" : "bg-gray-50 border border-gray-100 scale-95");
+
             return (
-              <div 
-                key={index}
-                className={`relative flex flex-col items-center justify-center aspect-square rounded-2xl transition-all duration-500 ${
-                  isFilled 
-                    ? 'bg-gradient-to-br from-pink-400 to-rose-400 shadow-md shadow-pink-200 scale-100' 
-                    : 'bg-gray-50 border border-gray-100 scale-95'
-                }`}
-              >
+              <div key={index} className={itemClassName}>
                 {isFilled ? (
                   <Check className="text-white w-6 h-6 animate-in zoom-in" strokeWidth={3} />
                 ) : isLast ? (
@@ -250,7 +247,7 @@ export default function App() {
         <div className="mt-5 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-pink-300 to-rose-400 transition-all duration-700 ease-out"
-            style={{ width: `${(careCount / TARGET_COUNT) * 100}%` }}
+            style={{ width: ((careCount / TARGET_COUNT) * 100) + "%" }}
           />
         </div>
       </div>
@@ -344,10 +341,10 @@ export default function App() {
 
         {(appState === 'loading' || appState === 'initial_loading') && (
           <div className="absolute inset-0 z-50 bg-gray-900 flex flex-col items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-pink-900/40 via-gray-900 to-rose-900/30 animate-cinematic-bg mix-blend-screen"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-900/40 via-gray-900 to-rose-900/30 mix-blend-screen" style={{ animation: "cinematicBg 15s infinite ease-in-out" }}></div>
             
-            <div className="z-10 flex flex-col items-center animate-fade-in-up">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-400 to-rose-300 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(244,114,182,0.4)] animate-pulse-slow">
+            <div className="z-10 flex flex-col items-center" style={{ animation: "fadeInUp 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards" }}>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-400 to-rose-300 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(244,114,182,0.4)]" style={{ animation: "pulseSlow 4s infinite ease-in-out" }}>
                 <Heart size={32} className="text-white" fill="currentColor" />
               </div>
               <h1 className="text-5xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-pink-100 via-white to-pink-200 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
@@ -359,7 +356,7 @@ export default function App() {
             </div>
 
             <Sparkles className="absolute top-1/4 right-1/4 text-pink-300/30 animate-ping" size={20} />
-            <Sparkles className="absolute bottom-1/3 left-1/4 text-rose-300/30 animate-pulse-slow" size={24} />
+            <Sparkles className="absolute bottom-1/3 left-1/4 text-rose-300/30" style={{ animation: "pulseSlow 4s infinite ease-in-out" }} size={24} />
           </div>
         )}
 
@@ -420,26 +417,30 @@ export default function App() {
                       아직 기록이 없어요.<br/>첫 케어를 시작해볼까요?
                     </div>
                   ) : (
-                    history.slice(0, 3).map((log) => (
-                      <div key={log.id} className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-50">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            log.type === 'reward' ? 'bg-pink-100 text-pink-500' : 'bg-gray-50 text-gray-400'
-                          }`}>
-                            {log.type === 'reward' ? <Gift size={18} /> : <Check size={18} />}
+                    history.slice(0, 3).map((log) => {
+                      // 백틱 제거 적용 부분
+                      const logClassName = "w-10 h-10 rounded-full flex items-center justify-center " + 
+                        (log.type === 'reward' ? "bg-pink-100 text-pink-500" : "bg-gray-50 text-gray-400");
+                        
+                      return (
+                        <div key={log.id} className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-50">
+                          <div className="flex items-center gap-3">
+                            <div className={logClassName}>
+                              {log.type === 'reward' ? <Gift size={18} /> : <Check size={18} />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-800">{log.title}</p>
+                              <p className="text-xs text-gray-400">{log.date}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-bold text-gray-800">{log.title}</p>
-                            <p className="text-xs text-gray-400">{log.date}</p>
-                          </div>
+                          {log.amount && (
+                            <span className="text-sm font-extrabold text-pink-500">
+                              +{log.amount.toLocaleString()}원
+                            </span>
+                          )}
                         </div>
-                        {log.amount && (
-                          <span className="text-sm font-extrabold text-pink-500">
-                            +{log.amount.toLocaleString()}원
-                          </span>
-                        )}
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -574,6 +575,15 @@ export default function App() {
         )}
 
       </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: 
+          ".hide-scrollbar::-webkit-scrollbar { display: none; }\n" +
+          ".hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }\n" +
+          "@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }\n" +
+          "@keyframes cinematicBg { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }\n" +
+          "@keyframes pulseSlow { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }"
+      }} />
     </div>
   );
 }
