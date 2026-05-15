@@ -962,6 +962,39 @@
 
         // Boot
         window.addEventListener('DOMContentLoaded', bootApp);
+// ==========================================
+// --- PWA 앱 설치 로직 ---
+// ==========================================
+let deferredPrompt;
+const installBtn = document.getElementById('install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if(installBtn) installBtn.style.display = 'flex'; 
+});
+
+if(installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('앱 설치 동의 완료');
+                installBtn.style.display = 'none';
+            }
+            deferredPrompt = null;
+        }
+    });
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('Service Worker registration error:', err);
+        });
+    });
+}
 
     </script>
 </body>
