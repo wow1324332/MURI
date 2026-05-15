@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Gift, Check, Sparkles, History, Heart, CreditCard, ChevronRight, X, User, Lock, Loader2, Settings } from 'lucide-react';
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from './firebase'; // Firebase DB 불러오기
+import { db } from './firebase';
 
 export default function App() {
   const [appState, setAppState] = useState('initial_loading');
@@ -25,7 +25,6 @@ export default function App() {
 
   const TARGET_COUNT = 10;
   
-  // 로딩 화면 시네마틱 타이머
   useEffect(() => {
     if (appState === 'initial_loading') {
       const timer = setTimeout(() => {
@@ -40,14 +39,11 @@ export default function App() {
     }
   }, [appState]);
 
-  // Firebase 실시간 데이터 연동 (로컬 스토리지 대체)
   useEffect(() => {
-    // 1. 회원 정보 목록 실시간 동기화 (muri_users 컬렉션)
     const unsubUsers = onSnapshot(collection(db, 'muri_users'), (snapshot) => {
       const userList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsers(userList);
       
-      // 관리자 계정이 DB에 없다면 최초 1회 자동 생성
       if (!userList.find(u => u.id === 'gguru1081')) {
         setDoc(doc(db, 'muri_users', 'gguru1081'), {
           password: 'djslzja1!',
@@ -58,7 +54,6 @@ export default function App() {
       }
     });
 
-    // 2. 앱 핵심 데이터 실시간 동기화 (muri_system 컬렉션의 appData 문서)
     const unsubData = onSnapshot(doc(db, 'muri_system', 'appData'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -66,7 +61,6 @@ export default function App() {
         setTotalPoints(data.totalPoints || 0);
         setHistory(data.history || []);
       } else {
-        // 데이터가 아예 없으면 초기화 세팅
         setDoc(doc(db, 'muri_system', 'appData'), { careCount: 0, totalPoints: 0, history: [] });
       }
     });
@@ -89,17 +83,17 @@ export default function App() {
 
   const handleLoginSubmit = () => {
     if (!authForm.id || !authForm.password) {
-      return showToast('아이디와 비밀번호를 입력해주세요.');
+      return showToast("아이디와 비밀번호를 입력해주세요.");
     }
 
     const user = users.find(u => u.id === authForm.id && u.password === authForm.password);
     
     if (!user) {
-      return showToast('아이디 또는 비밀번호가 틀렸습니다.');
+      return showToast("아이디 또는 비밀번호가 틀렸습니다.");
     }
     
     if (user.status === 'pending') {
-      return showToast('가입 승인 대기 중입니다. 관리자에게 문의하세요.');
+      return showToast("가입 승인 대기 중입니다. 관리자에게 문의하세요.");
     }
 
     setIsLoggingIn(true);
@@ -111,17 +105,15 @@ export default function App() {
     }, 1000);
   };
 
-  // Firebase에 회원가입 정보 저장
   const handleRegisterSubmit = async () => {
     if (!authForm.id || !authForm.password || !authForm.name) {
-      return showToast('모든 정보를 입력해주세요.');
+      return showToast("모든 정보를 입력해주세요.");
     }
     
     if (users.some(u => u.id === authForm.id)) {
-      return showToast('이미 존재하는 아이디입니다.');
+      return showToast("이미 존재하는 아이디입니다.");
     }
 
-    // Firebase DB에 새 유저 문서 생성
     await setDoc(doc(db, 'muri_users', authForm.id), {
       password: authForm.password,
       name: authForm.name,
@@ -129,7 +121,7 @@ export default function App() {
       role: 'viewer'
     });
 
-    showToast('가입 요청이 완료되었습니다. 승인을 기다려주세요.');
+    showToast("가입 요청이 완료되었습니다. 승인을 기다려주세요.");
     setIsRegisterMode(false);
     setAuthForm({ id: '', password: '', name: '' });
   };
@@ -138,24 +130,22 @@ export default function App() {
     if (adminModal.password === 'djslzja1324!') {
       setAdminModal({ ...adminModal, step: 'list' });
     } else {
-      showToast('관리자 비밀번호가 틀렸습니다.');
+      showToast("관리자 비밀번호가 틀렸습니다.");
     }
   };
 
-  // Firebase에서 유저 승인 처리
   const approveUser = async (userId) => {
     await updateDoc(doc(db, 'muri_users', userId), { status: 'approved' });
-    showToast('가입이 승인되었습니다.');
+    showToast("가입이 승인되었습니다.");
   };
 
-  // Firebase에 케어 완료 내역 업데이트
   const handleCareComplete = async () => {
     if (currentUser?.role !== 'admin') {
-      return showToast('보기 전용(뷰어) 계정입니다. 관리자만 조작할 수 있어요.');
+      return showToast("보기 전용(뷰어) 계정입니다. 관리자만 조작할 수 있어요.");
     }
 
     if (careCount >= TARGET_COUNT) {
-      showToast('이미 10회를 달성했어요! 선물을 뽑아주세요. 🎁');
+      showToast("이미 10회를 달성했어요! 선물을 뽑아주세요. 🎁");
       return;
     }
 
@@ -167,13 +157,13 @@ export default function App() {
       date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     };
     
-    // DB 업데이트
     await updateDoc(doc(db, 'muri_system', 'appData'), {
       careCount: newCount,
       history: [newLog, ...history]
     });
 
-    showToast(`참 잘했어요! (${newCount}/${TARGET_COUNT}) 💖`);
+    // 에러 발생 지점 수정: 문자열 결합 방식으로 변경
+    showToast("참 잘했어요! (" + newCount + "/" + TARGET_COUNT + ") 💖");
   };
 
   const drawPrize = () => {
@@ -183,10 +173,9 @@ export default function App() {
     return 100000;
   };
 
-  // Firebase에 뽑기 보상 내역 업데이트
   const handleDraw = () => {
     if (currentUser?.role !== 'admin') {
-      return showToast('보기 전용(뷰어) 계정입니다. 관리자만 조작할 수 있어요.');
+      return showToast("보기 전용(뷰어) 계정입니다. 관리자만 조작할 수 있어요.");
     }
 
     if (careCount < TARGET_COUNT) return;
@@ -203,7 +192,6 @@ export default function App() {
         date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
       };
       
-      // DB 업데이트
       await updateDoc(doc(db, 'muri_system', 'appData'), {
         totalPoints: totalPoints + amount,
         careCount: 0,
@@ -274,13 +262,11 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 flex justify-center items-start font-sans">
       <div className="w-full max-w-md min-h-screen bg-[#FAFAFA] relative shadow-2xl overflow-hidden flex flex-col">
         
-        {/* 1. 로그인 화면 */}
         {appState === 'login' && (
           <div className="absolute inset-0 z-40 bg-[#FAFAFA] flex flex-col justify-center px-8 overflow-hidden animate-in fade-in duration-700">
             <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-pink-100/60 to-transparent -z-10"></div>
             <div className="absolute top-0 right-0 w-64 h-64 bg-rose-100/40 rounded-full blur-3xl -mr-20 -mt-20 -z-10"></div>
             
-            {/* 관리자 승인 메뉴 (톱니바퀴) */}
             <button 
               onClick={() => setAdminModal({ show: true, step: 'password', password: '' })}
               className="absolute top-6 right-6 text-gray-400 hover:text-pink-500 transition-colors p-2"
@@ -357,7 +343,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. 시네마틱 로딩 화면 (초기 실행 및 로그인 후) */}
         {(appState === 'loading' || appState === 'initial_loading') && (
           <div className="absolute inset-0 z-50 bg-gray-900 flex flex-col items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-pink-900/40 via-gray-900 to-rose-900/30 animate-cinematic-bg mix-blend-screen"></div>
@@ -379,7 +364,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. 기존 메인 앱 화면 */}
         {appState === 'main' && (
           <div className="flex-1 flex flex-col h-full animate-in fade-in zoom-in-95 duration-500">
             <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-br from-rose-100 via-pink-50 to-[#FAFAFA] -z-10"></div>
@@ -487,7 +471,6 @@ export default function App() {
               )}
             </div>
 
-            {/* 보상 당첨 모달 */}
             {rewardModal.show && (
               <div className="absolute inset-0 z-50 flex items-center justify-center p-6">
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setRewardModal({ show: false, amount: 0 })}></div>
@@ -527,7 +510,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. 관리자 승인 모달 (로그인 화면에 오버레이) */}
         {adminModal.show && (
           <div className="absolute inset-0 z-[60] flex items-center justify-center p-6">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAdminModal({ show: false, step: 'password', password: '' })}></div>
@@ -586,7 +568,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 토스트 메시지 (모든 화면 최상단 공유) */}
         {toastMessage && (
           <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium z-[70] animate-in slide-in-from-top-5 fade-in whitespace-nowrap">
             {toastMessage}
@@ -594,42 +575,6 @@ export default function App() {
         )}
 
       </div>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
-        /* 시네마틱 애니메이션 추가 */
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fadeInUp 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        @keyframes cinematicBg {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); }
-        }
-        .animate-cinematic-bg {
-          animation: cinematicBg 15s infinite ease-in-out;
-        }
-        
-        @keyframes pulseSlow {
-          0%, 100% { opacity: 0.8; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.05); }
-        }
-        .animate-pulse-slow {
-          animation: pulseSlow 4s infinite ease-in-out;
-        }
-      `}} />
     </div>
   );
 }
