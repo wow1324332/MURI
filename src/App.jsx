@@ -4,7 +4,7 @@ import { Gift, Check, Sparkles, History, Heart, CreditCard, X, User, Lock, Loade
 import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
-export default function App() {
+const App = () => {
   const [appState, setAppState] = useState('initial_loading');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -226,7 +226,6 @@ export default function App() {
             const isFilled = index < careCount;
             const isLast = index === TARGET_COUNT - 1;
             
-            // 모든 백틱을 제거하고 기본 따옴표와 더하기 연산자로 수정했습니다.
             const itemClassName = "relative flex flex-col items-center justify-center aspect-square rounded-2xl transition-all duration-500 " + 
               (isFilled ? "bg-gradient-to-br from-pink-400 to-rose-400 shadow-md shadow-pink-200 scale-100" : "bg-gray-50 border border-gray-100 scale-95");
 
@@ -418,7 +417,6 @@ export default function App() {
                     </div>
                   ) : (
                     history.slice(0, 3).map((log) => {
-                      // 백틱 제거 적용 부분
                       const logClassName = "w-10 h-10 rounded-full flex items-center justify-center " + 
                         (log.type === 'reward' ? "bg-pink-100 text-pink-500" : "bg-gray-50 text-gray-400");
                         
@@ -587,6 +585,8 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
 
 
 ```
