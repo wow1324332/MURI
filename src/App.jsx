@@ -1,7 +1,7 @@
 ```react
 import React, { useState, useEffect } from 'react';
-import { Gift, Check, Sparkles, History, Heart, CreditCard, ChevronRight, X, User, Lock, Loader2, Settings } from 'lucide-react';
-import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { Gift, Check, Sparkles, History, Heart, CreditCard, X, User, Lock, Loader2, Settings } from 'lucide-react';
+import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 export default function App() {
@@ -162,7 +162,6 @@ export default function App() {
       history: [newLog, ...history]
     });
 
-    // 에러 발생 지점 수정: 문자열 결합 방식으로 변경
     showToast("참 잘했어요! (" + newCount + "/" + TARGET_COUNT + ") 💖");
   };
 
